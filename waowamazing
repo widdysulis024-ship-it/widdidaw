@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Generator Prediksi</title>
+
+<style>
+
+body{
+background:#111;
+color:white;
+font-family:Arial;
+padding:30px;
+}
+
+select,button{
+padding:10px;
+font-size:16px;
+margin:10px 0;
+}
+
+#result{
+white-space:pre-line;
+background:#000;
+padding:20px;
+border-radius:10px;
+line-height:1.6;
+margin-top:20px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Generator Prediksi Pasaran</h2>
+
+<select id="pasaran">
+<option value="ALL">ALL PASARAN</option>
+</select>
+
+<br>
+
+<button onclick="generate()">Generate Prediksi</button>
+<button onclick="copyResult()">COPY HASIL</button>
+
+<div id="result"></div>
+
+<script>
+
+const pasaranList=[
+"TOTO MACAU PAGI","KENTUCKYMID","FLORIDA MIDDAY","HUAHIN 0100","BANGKOK 0130",
+"NEW YORK MIDDAY","CAROLINA DAY","BRUNEI 02","OREGON03","OREGON06",
+"CALIFORNIA","FLORIDA EVE","OREGON09","BANGKOK 0930","NEW YORK EVE",
+"KENTUCKYEVE","CAROLINAEVE","TOTOCAMBODIA","CHELSEA 11","OREGON12",
+"POIPET12","BULLSEYE","TOTOMACAU SIANG","JAKARTA POOLS I","SYDNEY",
+"BRUNEI 14","CHELSEA 15","TOTOMACAU 5D SORE","POIPET15","TOTOMALI 1530",
+"TOTOMACAU SORE","HUAHIN 1630","KING KONG4D I","SINGAPORE","MAGNUM4D",
+"TOTOMACAU MALAM-I","CHELSEA 19","POIPET19","PCSO","TOTOMALI 2030",
+"HUAHIN 2100","CHELSEA 21","TOTOMACAU 5D MALAM","NEVADA","BRUNEI 21",
+"TOTOMACAU MALAM-II","POIPET22","HONGKONG","TOTOMACAU MALAM-III",
+"TOTOMALI 2330","JAKARTA POOLS II","KING KONG4D II","HOKIDRAW POOLS"
+];
+
+const shio=[
+"Kuda","Ular","Naga","Kelinci","Harimau","Kerbau",
+"Tikus","Babi","Anjing","Ayam","Monyet","Kambing"
+];
+
+const select=document.getElementById("pasaran");
+
+pasaranList.forEach(p=>{
+let opt=document.createElement("option");
+opt.value=p;
+opt.textContent=p;
+select.appendChild(opt);
+});
+
+function randDigit(){
+return Math.floor(Math.random()*10);
+}
+
+function randNum(len){
+let n="";
+for(let i=0;i<len;i++) n+=randDigit();
+return n;
+}
+
+function rand2(){
+return Math.floor(Math.random()*99).toString().padStart(2,'0');
+}
+
+function rand3(){
+return Math.floor(Math.random()*999).toString().padStart(3,'0');
+}
+
+function rand4(){
+return Math.floor(Math.random()*9999).toString().padStart(4,'0');
+}
+
+function randShio(){
+return shio[Math.floor(Math.random()*shio.length)];
+}
+
+function randTwin(){
+
+let twins=["11","22","33","44","55","66","77","88","99"];
+let result=[];
+
+while(result.length<3){
+
+let pick=twins[Math.floor(Math.random()*twins.length)];
+
+if(!result.includes(pick)){
+result.push(pick);
+}
+
+}
+
+return result.join(" / ");
+}
+
+function tanggal(){
+
+let hari=["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+let bulan=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+let d=new Date();
+
+return `Hari ${hari[d.getDay()]}, ${d.getDate()} ${bulan[d.getMonth()]} ${d.getFullYear()}`;
+
+}
+function copyResult(){
+
+let text=document.getElementById("result").textContent;
+
+navigator.clipboard.writeText(text).then(()=>{
+alert("Prediksi berhasil di copy bray!");
+});
+
+}
+
+function buatPrediksi(p){
+
+return `PASARAN ${p}
+${tanggal()}
+BBFS Kuat : ${randNum(7)}
+Angka main : ${randNum(5)}
+4D (BB) : ${rand4()} ${rand4()} ${rand4()} ${rand4()}
+3D (BB) : ${rand3()} ${rand3()} ${rand3()} ${rand3()}
+2D (BB) : ${rand2()} ${rand2()} ${rand2()} ${rand2()} ${rand2()} ${rand2()} ${rand2()} ${rand2()} ${rand2()} ${rand2()}
+Colok Bebas : ${randDigit()} / ${randDigit()}
+Colok Macau : ${rand2()} / ${rand2()} / ${rand2()}
+Colok Shio : ${randShio().toUpperCase()} / ${randShio().toUpperCase()} / ${randShio().toUpperCase()}
+Invest Twin : ${randTwin()}
+Biasakan UPS - UTAMAKAN PREDIKSI SENDIRI ya bosku
+
+`;
+
+}
+
+function generate(){
+
+let pilihan=select.value;
+let hasil="";
+
+if(pilihan==="ALL"){
+
+pasaranList.forEach(p=>{
+hasil+=buatPrediksi(p);
+});
+
+}else{
+
+hasil=buatPrediksi(pilihan);
+
+}
+
+document.getElementById("result").textContent=hasil;
+
+}
+
+</script>
+
+</body>
+</html>
