@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
+  <style>
+    body { background:#111; color:#fff; font-family:Arial; padding:20px; }
+    .container { display:flex; gap:20px; flex-wrap:wrap; }
+    .left, .right {
+      flex:1; display:flex; flex-direction:column; gap:20px; min-width:300px;
+    }
+    .card {
+      background:#222; padding:15px; border-radius:12px; text-align:center;
+    }
+    img, canvas { width:100%; border-radius:8px; margin-top:10px; }
+    textarea { width:100%; height:80px; border-radius:8px; margin-top:10px; }
+    button { padding:8px 15px; border:none; border-radius:6px; margin-top:10px; cursor:pointer; }
+  </style>
+</head>
+<body>
+
+<h2>OCR + Format + Upload</h2>
+
+<div class="container">
+  <!-- KIRI -->
+  <div class="left">
+    <div class="card">
+      <h3>Card 1 – Paste Gambar (CTRL+V)</h3>
+      <div id="pasteArea" style="padding:20px;border:2px dashed #555;border-radius:10px;">
+        Tekan CTRL + V di sini
+      </div>
+      <img id="preview">
+    </div>
+  </div>
+
+  <!-- KANAN -->
+  <div class="right">
+    <div class="card">
+      <h3>Card 2 – Hasil OCR Angka</h3>
+      <p id="result">Belum ada</p>
+    </div>
+
+    <div class="card">
+      <h3>Card 3 – Hasil Format</h3>
+      <p id="formatted">Belum ada</p>
+    </div>
+
+    <div class="card">
+      <h3>Card 4 – Link Gambar (Card 1)</h3>
+      <textarea id="linkOutput" readonly placeholder="Link akan muncul disini..."></textarea>
+      <button onclick="copyLink()">COPY LINK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const IMG_BB_TOKEN = "d7095fa9b829691dca438585646a7ed2";
+
+// ============================================
+// PASTE IMAGE DI CARD 1
+// ============================================
+document.addEventListener("paste", function (e) {
+  let items = e.clipboardData.items;
+
+  for (let item of items) {
+    if (item.type.startsWith("image")) {
+
+      let file = item.getAsFile();
+      let img = document.getElementById('preview');
+      img.src = URL.createObjectURL(file);
+
+      // Upload otomatis ke Card 4
+      uploadToImgBB(file);
+
+      img.onload = () => {
+
+        // ================================
+        // CARD 2 – OCR dari gambar Card 1
+        // ================================
+        let cropX  = img.width * 0;   // geser kiri ke kolom angka
+        let cropY  = img.height * 0.2;  // turun ke bawah header
+        let cropW  = img.width * 0.7;     // lebar kolom
+        let cropH  = img.height * 1;  // panjang list data
+
+        let tempCanvas = document.createElement("canvas");
+        tempCanvas.width = cropW;
+        tempCanvas.height = cropH;
+        let ctx = tempCanvas.getContext("2d");
+        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+        Tesseract.recognize(tempCanvas, "eng").then(({ data }) => {
+          let raw = data.text;
+          let matches = raw.match(/\d{6,20}/g);
+
+          if(matches){
+            let resultArr = [];
+            for(let i=0;i<matches.length;i+=2){
+              let combined = matches[i] + (matches[i+1] || '');
+              resultArr.push(combined);
+            }
+            document.getElementById("result").innerText = resultArr.join("\n");
+
+            // ================================
+            // CARD 3 – Format
+            // ================================
+            let formatted = resultArr.map(v => `${v}-${v}-201-0`).join("\n");
+            document.getElementById("formatted").innerText = formatted;
+
+          } else {
+            document.getElementById("result").innerText = "Tidak ditemukan";
+          }
+        });
+
+      };
+    }
+  }
+});
+
+// ============================================
+// UPLOAD KE IMGBB CARD 4
+// ============================================
+async function uploadToImgBB(file){
+  let form = new FormData();
+  form.append("image", file);
+
+  try{
+    let res = await fetch("https://api.imgbb.com/1/upload?key="+IMG_BB_TOKEN, {
+      method: "POST",
+      body: form
+    });
+
+    let json = await res.json();
+    document.getElementById("linkOutput").value = json.data.url || "UPLOAD GAGAL";
+
+  } catch(err){
+    document.getElementById("linkOutput").value = "ERROR KONEKSI";
+    console.error(err);
+  }
+}
+
+// ============================================
+// COPY LINK CARD 4
+// ============================================
+function copyLink(){
+  let area = document.getElementById("linkOutput");
+  area.select();
+  document.execCommand("copy");
+  alert("Link berhasil dicopy!");
+}
+</script>
+
+</body>
+</html>
