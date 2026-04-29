@@ -1,152 +1,238 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4"></script>
-  <style>
-    body { background:#111; color:#fff; font-family:Arial; padding:20px; }
-    .container { display:flex; gap:20px; flex-wrap:wrap; }
-    .left, .right {
-      flex:1; display:flex; flex-direction:column; gap:20px; min-width:300px;
-    }
-    .card {
-      background:#222; padding:15px; border-radius:12px; text-align:center;
-    }
-    img, canvas { width:100%; border-radius:8px; margin-top:10px; }
-    textarea { width:100%; height:80px; border-radius:8px; margin-top:10px; }
-    button { padding:8px 15px; border:none; border-radius:6px; margin-top:10px; cursor:pointer; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Radar Alarm Gacor</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --accent: #00ff88;
+            --gold: #ffca28;
+            --blue: #00d2ff;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at center, #111 0%, #000 100%);
+            color: #fff; margin: 0; padding: 15px; min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Styles tetap sama seperti sebelumnya untuk Grid dan Header */
+        .header { text-align: center; margin-bottom: 30px; padding: 20px; background: var(--glass); backdrop-filter: blur(20px); border-radius: 20px; border: 1px solid var(--glass-border); }
+        #clock { font-size: 3.5em; font-weight: 900; color: var(--accent); text-shadow: 0 0 15px var(--accent); margin: 0; }
+        
+        #priorityContainer { display: flex; flex-direction: column; gap: 15px; margin-bottom: 35px; }
+        .priority-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px); border: 1px solid rgba(255, 202, 40, 0.5); border-radius: 25px; padding: 20px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .p-name { font-size: 2.8em; font-weight: 900; color: #fff; text-shadow: 0 0 10px #fff, 0 0 20px var(--gold); display: block; }
+
+        .list-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: var(--glass); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 20px; transition: 0.4s; position: relative; }
+        .card.status-done { opacity: 0.2; }
+        .card-name { font-weight: 800; font-size: 1.2em; text-shadow: 0 0 10px var(--blue); }
+
+        /* MODAL ALARM OVERLAY */
+        #alarmOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(30px);
+            display: none; /* Sembunyi secara default */
+            flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .neon-alert {
+            font-size: 4em; font-weight: 900; color: #ff5252;
+            text-shadow: 0 0 20px #ff5252, 0 0 40px #ff5252;
+            margin-bottom: 20px;
+            animation: blink 0.8s infinite alternate;
+        }
+
+        @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
+
+        .result-names { font-size: 2.5em; color: var(--gold); text-shadow: 0 0 15px var(--gold); margin-bottom: 40px; }
+
+        .stop-btn {
+            background: #fff; color: #000; padding: 20px 60px;
+            border-radius: 50px; font-size: 1.5em; font-weight: bold;
+            cursor: pointer; border: none; box-shadow: 0 0 30px #fff;
+            transition: 0.3s;
+        }
+        .stop-btn:hover { transform: scale(1.1); background: var(--accent); box-shadow: 0 0 40px var(--accent); }
+
+        /* Tombol di card */
+        .card-link, .p-btn { display: block; text-align: center; text-decoration: none; font-weight: bold; transition: 0.3s; }
+        .card-link { background: rgba(255, 255, 255, 0.05); color: var(--blue); font-size: 0.8em; padding: 10px; border-radius: 12px; border: 1px solid var(--glass-border); }
+        .p-btn { background: var(--gold); color: #000; padding: 10px 30px; border-radius: 50px; margin-top: 15px; width: fit-content; margin-left: auto; margin-right: auto; box-shadow: 0 0 15px var(--gold); }
+    </style>
 </head>
 <body>
 
-<h2>OCR + Format + Upload</h2>
-
-<div class="container">
-  <!-- KIRI -->
-  <div class="left">
-    <div class="card">
-      <h3>Card 1 – Paste Gambar (CTRL+V)</h3>
-      <div id="pasteArea" style="padding:20px;border:2px dashed #555;border-radius:10px;">
-        Tekan CTRL + V di sini
-      </div>
-      <img id="preview">
-    </div>
-  </div>
-
-  <!-- KANAN -->
-  <div class="right">
-    <div class="card">
-      <h3>Card 2 – Hasil OCR Angka</h3>
-      <p id="result">Belum ada</p>
-    </div>
-
-    <div class="card">
-      <h3>Card 3 – Hasil Format</h3>
-      <p id="formatted">Belum ada</p>
-    </div>
-
-    <div class="card">
-      <h3>Card 4 – Link Gambar (Card 1)</h3>
-      <textarea id="linkOutput" readonly placeholder="Link akan muncul disini..."></textarea>
-      <button onclick="copyLink()">COPY LINK</button>
-    </div>
-  </div>
+<div id="alarmOverlay">
+    <div class="neon-alert">⚠️ PASARAN RESULT! ⚠️</div>
+    <div class="result-names" id="alertNames">HOKI DRAW</div>
+    <button class="stop-btn" onclick="stopAlarm()">MATIKAN ALARM</button>
 </div>
 
+<div class="header">
+    <span style="font-size: 0.7em; color: var(--gold); letter-spacing: 3px; font-weight: bold;">🔊 INDRATOGEL ALARM</span>
+    <p id="clock">00:00:00</p>
+</div>
+
+<div id="priorityContainer"></div>
+<div class="list-grid" id="mainGrid"></div>
+
+<audio id="alarmSound" src="https://actions.google.com/google_suonerie/alarm_clock.ogg" loop preload="auto"></audio>
+
 <script>
-const IMG_BB_TOKEN = "d7095fa9b829691dca438585646a7ed2";
+// Data Pasaran sama seperti sebelumnya
+const pasaranData = [
+    {n: "HOKI DRAW", t: "AUTO", r: "AUTO", l: "https://hokidraw.com/"},
+    {n: "TOTOMACAU PAGI", t: "00:00", r: "00:15", l: "https://totomacau-pools.us/"},
+    {n: "KENTUCKYMID", t: "00:05", r: "00:20", l: "https://www.kylottery.com/"},
+    {n: "FLORIDA MIDDAY", t: "00:20", r: "00:30", l: "https://floridalottery.com/"},
+    {n: "HUAHIN 0100", t: "00:45", r: "01:00", l: "https://huahinlottery.com/"},
+    {n: "BANGKOK 0130", t: "01:15", r: "01:30", l: "https://bangkokpoolstoday.com/"},
+    {n: "NEW YORK MIDDAY", t: "01:15", r: "01:25", l: "http://nylottery.ny.gov/"},
+    {n: "CAROLINA DAY", t: "01:45", r: "02:00", l: "https://www.wral.com/"},
+    {n: "BRUNEI 02", t: "02:30", r: "02:45", l: "https://bruneipools.com/"},
+    {n: "OREGON03", t: "02:50", r: "03:00", l: "https://www.oregonlottery.org/"},
+    {n: "OREGON06", t: "05:50", r: "06:00", l: "https://www.oregonlottery.org/"},
+    {n: "CALIFORNIA", t: "08:25", r: "08:30", l: "https://www.calottery.com/"},
+    {n: "FLORIDAEVE", t: "08:35", r: "08:45", l: "https://floridalottery.com/"},
+    {n: "OREGON09", t: "08:50", r: "09:00", l: "https://www.oregonlottery.org/"},
+    {n: "BANGKOK 0930", t: "09:15", r: "09:30", l: "https://bangkokpoolstoday.com/"},
+    {n: "NEWYORKEVE", t: "09:25", r: "09:35", l: "http://nylottery.ny.gov/"},
+    {n: "KENTUCKYEVE", t: "09:45", r: "10:00", l: "https://www.kylottery.com/"},
+    {n: "CAROLINAEVE", t: "10:17", r: "10:22", l: "http://www.wral.com/"},
+    {n: "TOTOCAMBODIA", t: "10:45", r: "11:00", l: "https://totocambodialive.com/"},
+    {n: "CHELSEA 11", t: "11:00", r: "11:15", l: "https://chelseapools.co.uk/"},
+    {n: "OREGON12", t: "11:50", r: "12:00", l: "https://www.oregonlottery.org/"},
+    {n: "POIPET12", t: "12:15", r: "12:30", l: "https://poipetlottery.com/"},
+    {n: "BULLSEYE", t: "13:00", r: "13:15", l: "https://mylotto.co.nz/"},
+    {n: "TOTOMACAU SIANG", t: "13:00", r: "13:15", l: "https://totomacau-pools.us/"},
+    {n: "JAKARTA POOLS I", t: "13:55", r: "14:10", l: "https://jakartapool.com"},
+    {n: "SYDNEY", t: "13:49", r: "14:05", l: "https://lottosydney.fun/"},
+    {n: "BRUNEI 14", t: "14:30", r: "14:45", l: "https://bruneipools.com/"},
+    {n: "CHELSEA 15", t: "15:00", r: "15:15", l: "https://chelseapools.co.uk/"},
+    {n: "TOTOMACAU 5D SORE", t: "15:15", r: "15:30", l: "https://totomacau-pools.us/"},
+    {n: "POIPET15", t: "15:15", r: "15:30", l: "https://poipetlottery.com/"},
+    {n: "TOTOMALI 1530", t: "15:15", r: "15:30", l: "https://totomali.com/"},
+    {n: "TOTOMACAU SORE", t: "16:00", r: "16:15", l: "https://totomacau-pools.us/"},
+    {n: "HUAHIN 1630", t: "16:15", r: "16:30", l: "https://huahinlottery.com/"},
+    {n: "KING KONG4D I", t: "17:00", r: "17:15", l: "https://kingkongpools.id/"},
+    {n: "SINGAPORE", t: "17:30", r: "17:45", l: "http://www.singaporepools.com.sg"},
+    {n: "MAGNUM4D", t: "18:10", r: "18:40", l: "http://www.magnum4d.my/"},
+    {n: "TOTOMACAU MALAM-I", t: "19:00", r: "19:15", l: "https://totomacau-pools.us/"},
+    {n: "CHELSEA 19", t: "19:00", r: "19:15", l: "https://chelseapools.co.uk/"},
+    {n: "POIPET19", t: "19:30", r: "19:45", l: "https://poipetlottery.com/"},
+    {n: "PCSO", t: "19:50", r: "20:10", l: "https://www.pcso.gov.ph/"},
+    {n: "TOTOMALI 2030", t: "20:15", r: "20:30", l: "https://totomali.com/"},
+    {n: "HUAHIN 2100", t: "20:45", r: "21:00", l: "https://huahinlottery.com/"},
+    {n: "CHELSEA 21", t: "21:00", r: "21:15", l: "https://chelseapools.co.uk/"},
+    {n: "TOTOMACAU 5D MALAM", t: "21:15", r: "21:30", l: "https://totomacau-pools.us/"},
+    {n: "NEVADA", t: "21:15", r: "21:30", l: "https://www.nevadalottery.us/"},
+    {n: "BRUNEI 21", t: "21:30", r: "21:45", l: "https://bruneipools.com/"},
+    {n: "TOTOMACAU MALAM-II", t: "22:00", r: "22:15", l: "https://totomacau-pools.us/"},
+    {n: "POIPET22", t: "22:30", r: "22:45", l: "https://poipetlottery.com/"},
+    {n: "HONGKONG", t: "22:59", r: "23:15", l: "https://lottohongkong.fun/"},
+    {n: "TOTOMACAU MALAM-III", t: "23:00", r: "23:15", l: "https://totomacau-pools.us/"},
+    {n: "TOTOMALI 2330", t: "23:15", r: "23:30", l: "https://totomali.com/"},
+    {n: "JAKARTA POOLS II", t: "23:25", r: "23:40", l: "https://jakartapool.com"},
+    {n: "KING KONG4D II", t: "23:30", r: "23:45", l: "https://kingkongpools.id/"}
+];
 
-// ============================================
-// PASTE IMAGE DI CARD 1
-// ============================================
-document.addEventListener("paste", function (e) {
-  let items = e.clipboardData.items;
+const audio = document.getElementById('alarmSound');
+function t2s(t) { const p = t.split(':').map(Number); return p[0] * 3600 + p[1] * 60; }
+function formatT(s) { const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const sc = s % 60; return `${h}j ${m}m ${sc}s`; }
 
-  for (let item of items) {
-    if (item.type.startsWith("image")) {
+function stopAlarm() {
+    audio.pause();
+    audio.currentTime = 0;
+    document.getElementById('alarmOverlay').style.display = 'none';
+}
 
-      let file = item.getAsFile();
-      let img = document.getElementById('preview');
-      img.src = URL.createObjectURL(file);
+function update() {
+    const now = new Date();
+    const curH = now.getHours();
+    const curM = now.getMinutes();
+    const curS = now.getSeconds();
+    const nowS = curH * 3600 + curM * 60 + curS;
+    
+    document.getElementById('clock').innerText = now.toLocaleTimeString('id-ID', {hour12:false}).replace(/\./g, ':');
 
-      // Upload otomatis ke Card 4
-      uploadToImgBB(file);
-
-      img.onload = () => {
-
-        // ================================
-        // CARD 2 – OCR dari gambar Card 1
-        // ================================
-        let cropX  = img.width * 0;   // geser kiri ke kolom angka
-        let cropY  = img.height * 0.2;  // turun ke bawah header
-        let cropW  = img.width * 0.7;     // lebar kolom
-        let cropH  = img.height * 1;  // panjang list data
-
-        let tempCanvas = document.createElement("canvas");
-        tempCanvas.width = cropW;
-        tempCanvas.height = cropH;
-        let ctx = tempCanvas.getContext("2d");
-        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-        Tesseract.recognize(tempCanvas, "eng").then(({ data }) => {
-          let raw = data.text;
-          let matches = raw.match(/\d{6,20}/g);
-
-          if(matches){
-            let resultArr = [];
-            for(let i=0;i<matches.length;i+=2){
-              let combined = matches[i] + (matches[i+1] || '');
-              resultArr.push(combined);
-            }
-            document.getElementById("result").innerText = resultArr.join("\n");
-
-            // ================================
-            // CARD 3 – Format
-            // ================================
-            let formatted = resultArr.map(v => `${v}-${v}-201-0`).join("\n");
-            document.getElementById("formatted").innerText = formatted;
-
-          } else {
-            document.getElementById("result").innerText = "Tidak ditemukan";
-          }
-        });
-
-      };
-    }
-  }
-});
-
-// ============================================
-// UPLOAD KE IMGBB CARD 4
-// ============================================
-async function uploadToImgBB(file){
-  let form = new FormData();
-  form.append("image", file);
-
-  try{
-    let res = await fetch("https://api.imgbb.com/1/upload?key="+IMG_BB_TOKEN, {
-      method: "POST",
-      body: form
+    // LOGIKA AUTO HOKI DRAW
+    let hokiTutup = (curH + 1).toString().padStart(2, '0') + ":00";
+    if (curM === 0 && curS < 10) hokiTutup = curH.toString().padStart(2, '0') + ":00";
+    
+    let processedData = pasaranData.map(p => {
+        if(p.n === "HOKI DRAW") return { ...p, t: hokiTutup, r: hokiTutup.split(':')[0] + ":01" };
+        return p;
     });
 
-    let json = await res.json();
-    document.getElementById("linkOutput").value = json.data.url || "UPLOAD GAGAL";
+    // Cari Priority
+    let minD = 86400;
+    processedData.forEach(p => {
+        let d = t2s(p.t) - nowS;
+        if (d < 0) d += 86400;
+        if (d < minD) minD = d;
+    });
 
-  } catch(err){
-    document.getElementById("linkOutput").value = "ERROR KONEKSI";
-    console.error(err);
-  }
+    let tops = processedData.filter(p => {
+        let d = t2s(p.t) - nowS;
+        if (d < 0) d += 86400;
+        return d === minD;
+    });
+
+    document.getElementById('priorityContainer').innerHTML = tops.map(p => `
+        <div class="priority-card">
+            <h3 style="color:var(--gold); font-size:0.7em; letter-spacing:4px; margin:0;">⚠️ PASARAN YANG MAU CLOSED ⚠️</h3>
+            <span class="p-name">${p.n}</span>
+            <div class="p-timer">TUTUP DALAM: ${formatT(minD)}</div>
+            <a href="${p.l}" target="_blank" class="p-btn">🌐 GAS KE LINK RESMI</a>
+        </div>
+    `).join('');
+
+    // Update List Grid
+    const grid = document.getElementById('mainGrid');
+    grid.innerHTML = processedData.map(p => {
+        const tutS = t2s(p.t);
+        let isDone = (p.n !== "HOKI DRAW" && nowS >= tutS);
+        return `
+            <div class="card ${isDone ? 'status-done' : ''}">
+                <span class="card-name">${p.n}</span>
+                <div style="font-size:0.8em; margin:10px 0;">Tutup: <b>${p.t}</b> | Res: <b>${p.r}</b></div>
+                <a href="${p.l}" class="card-link" target="_blank">🌐 GO TO LINK RESMI</a>
+            </div>
+        `;
+    }).join('');
+
+    // ALARM & OVERLAY TRIGGER
+    // Trigger pas jam pas (00:00) atau pas ada pasaran lain yang detik sisanya 0
+    if (minD === 0 && curS === 0) {
+        let names = tops.map(p => p.n).join(" & ");
+        document.getElementById('alertNames').innerText = names;
+        document.getElementById('alarmOverlay').style.display = 'flex';
+        audio.play().catch(e => console.log("User must interact first"));
+    }
 }
 
-// ============================================
-// COPY LINK CARD 4
-// ============================================
-function copyLink(){
-  let area = document.getElementById("linkOutput");
-  area.select();
-  document.execCommand("copy");
-  alert("Link berhasil dicopy!");
-}
+// User Interaction agar audio bisa jalan
+window.onclick = () => { 
+    if(audio.paused && document.getElementById('alarmOverlay').style.display !== 'flex') {
+        audio.play(); audio.pause(); 
+    }
+};
+
+setInterval(update, 1000);
+update();
 </script>
-
 </body>
 </html>
